@@ -89,6 +89,19 @@ struct WiFiView: View {
             if busy { ToolbarItem { ProgressView().controlSize(.small) } }
         }
         .sheet(item: $editing) { r in WiFiEditor(row: r, all: rows) }
+        .onChange(of: model.request, initial: true) { _, r in
+            switch r?.intent {
+            case .editWiFi(let i)?:
+                model.request = nil
+                selection = i
+                editing = rows.first { $0.index == i }
+            case .toggleWiFi(let i, let on)?:
+                model.request = nil
+                selection = i
+                if let row = rows.first(where: { $0.index == i }) { toggle(row, on) }
+            default: break
+            }
+        }
         .confirmationDialog("Turn off \"\(confirmOff?.ssid ?? "")\" (\(confirmOff?.band ?? ""))?",
                             isPresented: Binding(get: { confirmOff != nil }, set: { if !$0 { confirmOff = nil } })) {
             Button("Turn Off", role: .destructive) { if let r = confirmOff { apply(r, false) } }

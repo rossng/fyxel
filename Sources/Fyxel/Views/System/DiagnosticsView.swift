@@ -3,13 +3,13 @@ import SwiftUI
 
 struct DiagnosticsView: View {
     var body: some View {
-        ScrollView {
+        RevealScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                NetToolPanel()
-                NATSessionsPanel()
+                NetToolPanel().revealAnchor(Anchor.netTools)
+                NATSessionsPanel().revealAnchor(Anchor.natSessions)
                 HStack(alignment: .top, spacing: 14) {
-                    ARPPanel()
-                    MulticastPanel()
+                    ARPPanel().revealAnchor(Anchor.arp)
+                    MulticastPanel().revealAnchor(Anchor.multicast)
                 }
             }
             .padding(16)
@@ -25,13 +25,14 @@ struct NetToolPanel: View {
     @State private var ipv6 = false
     @State private var output = ""
     @State private var running: Task<Void, Never>?
+    @FocusState private var hostFocused: Bool
 
     var body: some View {
         Panel(title: "Network Tools", systemImage: "point.3.connected.trianglepath.dotted") {
             HStack {
                 Picker("", selection: $kind) { ForEach(DiagnosticKind.allCases) { Text($0.label).tag($0) } }
                     .pickerStyle(.segmented).labelsHidden().fixedSize()
-                TextField("host or IP", text: $host).mono().frame(maxWidth: 320).onSubmit(run)
+                TextField("host or IP", text: $host).mono().frame(maxWidth: 320).onSubmit(run).focused($hostFocused)
                 if kind != .nslookup { Toggle("IPv6", isOn: $ipv6).toggleStyle(.checkbox) }
                 if running != nil {
                     Button("Stop") { running?.cancel(); running = nil }
@@ -52,6 +53,13 @@ struct NetToolPanel: View {
             }
             .frame(height: 220)
             .background(.background, in: RoundedRectangle(cornerRadius: 6))
+        }
+        .onChange(of: model.request, initial: true) { _, r in
+            guard case .netTool(let k)? = r?.intent else { return }
+            model.request = nil
+            kind = k
+            // After the palette has gone, or it takes focus back as it closes.
+            Task { try? await Task.sleep(for: .milliseconds(150)); hostFocused = true }
         }
     }
 

@@ -11,7 +11,7 @@ struct SpecPage<Header: View>: View {
     @ViewBuilder var header: Header
 
     var body: some View {
-        ScrollView {
+        RevealScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 header
                 ForEach(specs) { SpecSection(spec: $0) }
@@ -40,6 +40,8 @@ struct SpecSection: View {
             if let s = spec.summary { Text(s).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
             content
         }
+        .revealAnchor(Anchor.spec(spec))
+        .environment(\.revealedField, model.request?.intent.revealedField(in: Anchor.spec(spec)))
         .task(id: "\(spec.id)#\(reloadToken)") { await load() }
     }
 
@@ -72,7 +74,9 @@ struct SpecSection: View {
 
     func load() async {
         do {
-            rows = try await model.client.load(spec)
+            let loaded = try await model.client.load(spec)
+            rows = loaded
+            model.specRows[spec.id] = loaded
             error = nil
         } catch is CancellationError {
         } catch {
@@ -143,6 +147,7 @@ struct FieldGrid: View {
     var spec: ObjectSpec
     @Binding var obj: JSONValue
     var original: JSONValue?
+    @Environment(\.revealedField) private var revealed
 
     var body: some View {
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 14, verticalSpacing: 8) {
@@ -152,7 +157,12 @@ struct FieldGrid: View {
                         Text(f.label)
                         if let o = original, o[f.key] != obj[f.key] { Circle().fill(.orange).frame(width: 5, height: 5) }
                     }
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(revealed == f.key ? .primary : .secondary)
+                    .background {
+                        RoundedRectangle(cornerRadius: 4).fill(Color.accentColor.opacity(0.3)).padding(-3)
+                            .opacity(revealed == f.key ? 1 : 0)
+                            .animation(.easeInOut(duration: revealed == f.key ? 0.2 : 0.6), value: revealed)
+                    }
                     .gridColumnAlignment(.trailing)
                     VStack(alignment: .leading, spacing: 2) {
                         FieldControl(field: f, value: Binding(get: { obj[f.key] }, set: { obj[f.key] = $0 }))

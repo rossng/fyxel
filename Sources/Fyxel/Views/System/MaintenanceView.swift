@@ -6,12 +6,12 @@ struct MaintenanceView: View {
     var body: some View {
         SpecPage(specs: Specs.system) {
             HStack(alignment: .top, spacing: 14) {
-                DevicePanel()
-                ConfigPanel()
+                DevicePanel().revealAnchor(Anchor.device)
+                ConfigPanel().revealAnchor(Anchor.config)
             }
             HStack(alignment: .top, spacing: 14) {
-                FirmwarePanel()
-                PasswordPanel()
+                FirmwarePanel().revealAnchor(Anchor.firmware)
+                PasswordPanel().revealAnchor(Anchor.password)
             }
         }
     }

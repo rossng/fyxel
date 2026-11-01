@@ -58,6 +58,13 @@ struct DevicesView: View {
             }
         }
         .safeAreaInset(edge: .bottom) { footer(rows) }
+        .onChange(of: model.request, initial: true) { _, r in
+            guard case .showDevice(let mac)? = r?.intent else { return }
+            model.request = nil
+            if model.host(forMAC: mac)?.active == false { onlineOnly = false }
+            search = mac
+            selection = [mac]
+        }
         .sheet(item: $inspecting) { h in JSONInspector(title: model.customNames[h.mac] ?? h.displayName, value: h.raw) }
         .sheet(item: $renaming) { h in RenameSheet(host: h, name: model.customNames[h.mac] ?? h.displayName) }
         .sheet(item: $reserving) { h in

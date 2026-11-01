@@ -30,6 +30,12 @@ something dense, fast and keyboard-friendly. Built against an **EX5601-T1** (fir
 | **Phone & USB** | Phone ports, caller-ID region, SIP accounts, USB file shares, DLNA media server, cellular backup |
 | **API Explorer** | GET any `/cgi-bin/…` endpoint and see the decrypted JSON |
 
+`⌘K` (or `⇧⌘P`, or the "Go to…" field at the top of the sidebar) opens a fuzzy finder over every
+page, panel, setting and action, plus your Wi-Fi networks, devices, reservations and port forwards,
+and any value on a settings page you've opened this session (local DNS names, DDNS host…). Pick
+one and the app goes there: it scrolls to and highlights the setting, or opens the editor for
+the network, rule or reservation.
+
 `⌘1`–`⌘9` jump between the first nine sections, `⌘R` refreshes, `⌘N` adds a rule or
 reservation, `⌫` deletes, and double-clicking a row opens it. Writes that can disconnect
 you (radio restarts, LAN address changes, firewall and remote-management rules) ask first,

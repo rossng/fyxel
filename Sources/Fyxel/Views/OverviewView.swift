@@ -6,7 +6,7 @@ struct OverviewView: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        ScrollView { OverviewContent() }
+        RevealScrollView { OverviewContent() }
     }
 }
 
@@ -17,14 +17,14 @@ struct OverviewContent: View {
         Group {
             if let s = model.status {
                 VStack(spacing: 14) {
-                    ThroughputPanel()
+                    ThroughputPanel().revealAnchor(Anchor.throughput)
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 14, alignment: .top)], spacing: 14) {
-                        InternetPanel(status: s)
-                        SystemPanel(status: s)
-                        PortsPanel(status: s)
-                        WiFiSummaryPanel(status: s)
-                        LANPanel()
-                        RoutesPanel()
+                        InternetPanel(status: s).revealAnchor(Anchor.internet)
+                        SystemPanel(status: s).revealAnchor(Anchor.system)
+                        PortsPanel(status: s).revealAnchor(Anchor.ethernet)
+                        WiFiSummaryPanel(status: s).revealAnchor(Anchor.wifiSummary)
+                        LANPanel().revealAnchor(Anchor.lanSummary)
+                        RoutesPanel().revealAnchor(Anchor.routes)
                     }
                 }
                 .padding(16)

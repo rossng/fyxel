@@ -19,17 +19,23 @@ struct MainView: View {
     var body: some View {
         @Bindable var model = model
         NavigationSplitView {
-            List(selection: $model.section) {
-                ForEach(Section.Group.allCases, id: \.self) { g in
-                    SwiftUI.Section(g.rawValue) {
-                        ForEach(Section.allCases.filter { $0.group == g }) { s in
-                            Label(s.rawValue, systemImage: s.icon).tag(s)
+            // A plain stack, not `.safeAreaInset` on the List: when the list doesn't fit, insets
+            // let rows scroll under the (transparent) footer, and SwiftUI can loop re-insetting.
+            VStack(spacing: 0) {
+                PaletteButton().padding(.horizontal, 10).padding(.top, 2).padding(.bottom, 6)
+                List(selection: $model.section) {
+                    ForEach(Section.Group.allCases, id: \.self) { g in
+                        SwiftUI.Section(g.rawValue) {
+                            ForEach(Section.allCases.filter { $0.group == g }) { s in
+                                Label(s.rawValue, systemImage: s.icon).tag(s)
+                            }
                         }
                     }
                 }
+                Divider()
+                SidebarFooter()
             }
             .navigationSplitViewColumnWidth(min: 170, ideal: 190)
-            .safeAreaInset(edge: .bottom) { SidebarFooter() }
         } detail: {
             SectionContent(section: model.section)
             .navigationTitle(model.section.rawValue)
@@ -78,6 +84,52 @@ struct MainView: View {
         } message: {
             Text("Everything on the network loses connectivity for a few minutes.")
         }
+        .overlay(alignment: .top) {
+            if model.paletteOpen {
+                ZStack(alignment: .top) {
+                    // Click outside to dismiss.
+                    Color.black.opacity(0.08).ignoresSafeArea().onTapGesture { model.paletteOpen = false }
+                    CommandPalette().padding(.top, 36)
+                }
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.12), value: model.paletteOpen)
+        .background {
+            // ⇧⌘P as well as ⌘K, for VS Code / Sublime muscle memory.
+            Button("") { model.paletteOpen.toggle() }
+                .keyboardShortcut("p", modifiers: [.command, .shift])
+                .opacity(0).frame(width: 0, height: 0).accessibilityHidden(true)
+        }
+        .onChange(of: model.request) { _, r in
+            if r?.intent == .reboot { model.request = nil; confirmReboot = true }
+        }
+    }
+}
+
+/// Sidebar button that looks like a search field and opens the command palette.
+struct PaletteButton: View {
+    @Environment(AppModel.self) private var model
+    var body: some View {
+        Button { model.paletteOpen.toggle() } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                Text("Go to…")
+                Spacer(minLength: 4)
+                Text("⌘K").font(.system(size: 11, weight: .medium, design: .rounded))
+                    .padding(.horizontal, 5).padding(.vertical, 1)
+                    .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity)
+            .frame(height: 26)
+            .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 7))
+            .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Color.primary.opacity(0.1)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Search pages, settings, actions, networks and devices (⌘K)")
     }
 }
 
@@ -262,18 +314,19 @@ struct SectionContent: View {
         case .overview: OverviewView()
         case .devices: DevicesView()
         case .wifi: WiFiView()
-        case .wifiAdvanced: SpecPage(specs: Specs.wifi)
-        case .lan: SpecPage(specs: Specs.lan)
+        // One case per page (not a combined case) so each page gets its own view identity.
+        case .wifiAdvanced: SpecPage(specs: section.specs)
+        case .lan: SpecPage(specs: section.specs)
         case .dhcp: DHCPView()
         case .ports: PortForwardingView()
-        case .nat: SpecPage(specs: Specs.nat)
-        case .routing: SpecPage(specs: Specs.routing)
-        case .firewall: SpecPage(specs: Specs.firewall)
-        case .parental: SpecPage(specs: Specs.parental)
+        case .nat: SpecPage(specs: section.specs)
+        case .routing: SpecPage(specs: section.specs)
+        case .firewall: SpecPage(specs: section.specs)
+        case .parental: SpecPage(specs: section.specs)
         case .diagnostics: DiagnosticsView()
         case .logs: LogsView()
         case .maintenance: MaintenanceView()
-        case .services: SpecPage(specs: Specs.services)
+        case .services: SpecPage(specs: section.specs)
         case .explorer: ExplorerView()
         }
     }

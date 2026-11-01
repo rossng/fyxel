@@ -77,6 +77,13 @@ struct LogsView: View {
             }
         }
         .searchable(text: $search, placement: .toolbar, prompt: "Filter log")
+        .onChange(of: model.request, initial: true) { _, r in
+            switch r?.intent {
+            case .logs(let k)?: model.request = nil; kind = k
+            case .logSettings?: model.request = nil; showSettings = true
+            default: break
+            }
+        }
         .task(id: "\(kind.rawValue)/\(category)") { await load() }
         .task(id: kind) {
             categories = (try? await model.client.logCategories(kind)) ?? []

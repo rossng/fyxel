@@ -18,6 +18,10 @@ struct FyxelApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {}
             CommandMenu("Router") {
+                // Not `.disabled(...)`: in testing, the menu's enabled state didn't follow `model.phase`.
+                Button("Go to Anything…") { if model.phase == .loggedIn { model.paletteOpen.toggle() } }
+                    .keyboardShortcut("k")
+                Divider()
                 Button("Refresh") { Task { await model.refreshAll() } }
                     .keyboardShortcut("r")
                     .disabled(model.phase != .loggedIn)

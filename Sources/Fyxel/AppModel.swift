@@ -46,11 +46,67 @@ enum Section: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Spec-driven settings panels on this page (generic pages, and the palette's index).
+    var specs: [ObjectSpec] {
+        switch self {
+        case .wifiAdvanced: Specs.wifi
+        case .lan: Specs.lan
+        case .nat: Specs.nat
+        case .routing: Specs.routing
+        case .firewall: Specs.firewall
+        case .parental: Specs.parental
+        case .maintenance: Specs.system
+        case .services: Specs.services
+        default: []
+        }
+    }
+
+    /// Extra words the palette matches this section by.
+    var keywords: String {
+        switch self {
+        case .overview: "status dashboard throughput wan internet public ip cpu memory"
+        case .devices: "hosts clients computers phones"
+        case .wifi: "wireless wlan ssid password network"
+        case .wifiAdvanced: "wireless guest wps mesh radio schedule"
+        case .lan: "dhcp dns ipv6 upnp ddns subnet"
+        case .dhcp: "static lease reservation fixed ip"
+        case .ports: "port forwarding nat upnp virtual server"
+        case .nat: "dmz alg triggering"
+        case .routing: "routes qos static policy"
+        case .firewall: "acl dos security mac filter"
+        case .parental: "kids schedule block sites"
+        case .diagnostics: "ping traceroute nslookup arp multicast sessions"
+        case .logs: "syslog security log"
+        case .maintenance: "reboot firmware backup restore password time ntp remote management"
+        case .services: "phone voip sip usb dlna cellular lte"
+        case .explorer: "api json cgi debug"
+        }
+    }
+
     /// ⌘1…⌘9 for the first nine sections.
     var shortcut: KeyEquivalent? {
         let i = Section.allCases.firstIndex(of: self) ?? 99
         return i < 9 ? KeyEquivalent(Character(String(i + 1))) : nil
     }
+}
+
+/// Something to do once a section is showing: scroll to a panel, open an editor, etc. The
+/// view that owns the relevant state picks it up and clears `AppModel.request`.
+enum NavIntent: Equatable {
+    /// Scroll to a `.revealAnchor` and flash it; `field` also highlights a spec field's label.
+    case reveal(String, field: String? = nil)
+    case editWiFi(Int), toggleWiFi(Int, on: Bool)
+    case showDevice(mac: String)
+    case addReservation, editReservation(Int)
+    case addPortForward, editPortForward(Int)
+    case netTool(DiagnosticKind)
+    case logs(LogKind), logSettings
+    case reboot
+}
+
+struct NavRequest: Equatable {
+    let id = UUID()
+    var intent: NavIntent
 }
 
 struct RateSample: Identifiable {
@@ -76,6 +132,11 @@ final class AppModel {
     var lastError: String?
     var section: Section = .overview
     var lastUpdated: Date?
+    /// Command palette (⌘K) and the navigation request it leaves for the destination view.
+    var paletteOpen = false
+    var request: NavRequest?
+    /// What each spec section last loaded, so the palette can search configured values.
+    var specRows: [String: [JSONValue]] = [:]
     /// Router account level ("high", "medium"…); some pages are refused below "high".
     var accountLevel = ""
 
@@ -180,6 +241,7 @@ final class AppModel {
         password = nil
         phase = .loggedOut
         status = nil; hosts = []; rates = []; lastTraffic = nil
+        specRows = [:]; paletteOpen = false; request = nil
         if isDemo { isDemo = false; client = RouterClient(host: host) }
     }
 
@@ -336,6 +398,12 @@ final class AppModel {
     }
 
     // MARK: Helpers
+
+    /// Show a section, optionally with something for it to do when it appears.
+    func go(_ s: Section, _ intent: NavIntent? = nil) {
+        section = s
+        request = intent.map { NavRequest(intent: $0) }
+    }
 
     func name(for mac: String) -> String? {
         let m = mac.lowercased()

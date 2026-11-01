@@ -56,6 +56,16 @@ struct DHCPView: View {
                     .disabled(selection == nil).keyboardShortcut(.delete)
             }
         }
+        .onChange(of: model.request, initial: true) { _, r in
+            switch r?.intent {
+            case .addReservation?: model.request = nil; adding = true
+            case .editReservation(let i)?:
+                model.request = nil
+                selection = i
+                editing = model.reservations.first { $0.index == i }
+            default: break
+            }
+        }
         .sheet(item: $editing) { r in ReservationEditor(original: r) }
         .sheet(isPresented: $adding) { ReservationEditor(original: nil) }
         .confirmationDialog("Delete reservation for \(deleting?.ip ?? "")?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
