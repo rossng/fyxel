@@ -98,6 +98,9 @@ fyxelctl get /cgi-bin/RoutingTable_handle
 fyxelctl put nat_conf '{"DMZHost":"0.0.0.0"}' # PUT a DAL object
 fyxelctl delete static_dhcp 3                # DELETE ?Index=3
 fyxelctl selftest                            # add + edit + delete a throwaway rule and lease
+fyxelctl selftest-specs                      # same for a DNS name, port trigger and firewall service; toggle LEDs
+fyxelctl specs                               # load every settings page; shows which ones your account may use
+fyxelctl ping 1.1.1.1                        # ping from the router
 eval "$(fyxelctl login)"                     # export a session so later calls skip login
 FYXEL_MOCK=1 fyxelctl dal wlan               # same commands against the mock router
 ```
@@ -105,6 +108,11 @@ FYXEL_MOCK=1 fyxelctl dal wlan               # same commands against the mock ro
 `fyxelctl` takes its password from the Fyxel keychain item and asks for Touch ID. The first time
 it runs, macOS asks whether `fyxelctl` may read the item; choose "Always Allow". You can also
 set `FYXEL_PASSWORD`, `FYXEL_HOST` and `FYXEL_USER`.
+
+The router rotates its CSRF token during a session. When you reuse an exported session, set
+`FYXEL_SESSION_FILE=path` and `source` that file before each call, so the rotated token carries
+over. Otherwise writes start failing with an empty HTTP 403. The app handles this itself by
+logging in again.
 
 ## Architecture
 

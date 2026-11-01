@@ -151,7 +151,16 @@ public actor RouterClient: RouterAPI {
             }
             throw RouterError.sessionExpired
         }
+        // A write with a stale CSRF token gets an empty 403. The token can't be recovered,
+        // so log in again (if we can) and retry once.
+        if resp.status == 403, method != .GET, !retried, credentialProvider != nil {
+            session = nil
+            if try await reauthenticate() { return try await send(method, path, query: query, body: body, retried: true) }
+        }
         guard (200..<300).contains(resp.status) else {
+            if resp.status == 403, method != .GET, resp.data.isEmpty {
+                throw RouterError.badResponse("The router refused the write (stale CSRF token). Log in again.")
+            }
             throw RouterError.http(resp.status, String(decoding: resp.data, as: UTF8.self))
         }
         var json = try decryptIfNeeded(resp.json, key: s.aesKey)

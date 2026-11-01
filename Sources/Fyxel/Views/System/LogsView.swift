@@ -15,6 +15,7 @@ struct LogsView: View {
     @State private var confirmClear = false
     @State private var showSettings = false
     @State private var follow = false
+    @State private var loggingEnabled = true
 
     var filtered: [LogLine] {
         lines.reversed().filter { l in
@@ -48,6 +49,15 @@ struct LogsView: View {
             Divider()
             if let error {
                 Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(.orange).padding()
+            }
+            if !loggingEnabled {
+                HStack {
+                    Label("Logging is turned off on the router, so there's nothing to show.", systemImage: "info.circle")
+                    Button("Log Settings…") { showSettings = true }
+                    Spacer()
+                }
+                .padding(10)
+                .background(.yellow.opacity(0.12))
             }
             Table(filtered) {
                 TableColumn("Time") { l in Text(l.time).mono().foregroundStyle(.secondary) }.width(min: 120, ideal: 130, max: 150)
@@ -83,7 +93,7 @@ struct LogsView: View {
                 Task { if await model.write("Clear log", { try await model.client.clearLog(kind) }) { await load() } }
             }
         } message: { Text("This can't be undone.") }
-        .sheet(isPresented: $showSettings) {
+        .sheet(isPresented: $showSettings, onDismiss: { Task { await load() } }) {
             VStack(alignment: .leading) {
                 SpecSection(spec: Specs.logSettings)
                 HStack { Spacer(); Button("Done") { showSettings = false }.keyboardShortcut(.defaultAction) }
@@ -99,6 +109,7 @@ struct LogsView: View {
         do {
             lines = try await model.client.logLines(kind, category: category)
             error = nil
+            if let ls = try? await model.client.dal("logset").first { loggingEnabled = ls["Enable"].bool }
         } catch {
             self.error = error.localizedDescription
         }
