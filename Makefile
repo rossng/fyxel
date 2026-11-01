@@ -4,6 +4,7 @@
 #   make install    copy it to /Applications (and fyxelctl to ~/.local/bin)
 #   make run        build and open
 #   make zip        build/Fyxel.zip, for copying to another Mac
+#   make dmg        build/Fyxel-<version>.dmg for releases (ad-hoc signed, not notarized; needs uv)
 #   make demo       run the app against the built-in mock router
 #   make test       unit tests (against the mock router)
 #   make screenshots  regenerate docs/screenshots from the mock router
@@ -24,7 +25,10 @@ TESTFLAGS := $(if $(wildcard $(CLT_FW)/Testing.framework),-Xswiftc -F$(CLT_FW) -
 # Sections captured by `make screenshots` (sidebar names, comma-separated).
 SECTIONS ?= Overview,Devices,Wi-Fi,Wi-Fi Settings,LAN,Firewall,Diagnostics,Logs,Maintenance
 
-.PHONY: all app install run zip clean icon demo test screenshots
+VERSION  := $(shell /usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Support/Info.plist)
+DMG      := build/Fyxel-$(VERSION).dmg
+
+.PHONY: all app install run zip dmg clean icon demo test screenshots
 
 all: app
 
@@ -51,6 +55,15 @@ run: app
 zip: app
 	cd build && rm -f Fyxel.zip && ditto -c -k --keepParent Fyxel.app Fyxel.zip
 	@echo "build/Fyxel.zip"
+
+# Release disk image with a themed install window. Always ad-hoc signed, so it carries no
+# personal certificate. dmgbuild lays out the window without driving Finder.
+dmg:
+	$(MAKE) app IDENTITY=-
+	swift Support/make-dmg-background.swift build/dmg-background
+	rm -f $(DMG)
+	uvx dmgbuild -s Support/dmg-settings.py -D app=$(APP) -D background=build/dmg-background.tiff Fyxel $(DMG)
+	@echo "$(DMG)"
 
 demo: app
 	FYXEL_MOCK=1 $(APP)/Contents/MacOS/Fyxel

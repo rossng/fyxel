@@ -58,6 +58,13 @@ pages show a lock notice instead of failing, and work as-is with a "high" accoun
 
 ## Install
 
+Download the DMG from [Releases](https://github.com/rossng/fyxel/releases), open it and drag
+Fyxel into Applications. It needs macOS 14+ on Apple silicon. The build isn't notarized, so the
+first time you open it macOS refuses: go to System Settings › Privacy & Security and click
+**Open Anyway**, or run `xattr -dr com.apple.quarantine /Applications/Fyxel.app`.
+
+### From source
+
 Needs macOS 14+ and Xcode or the Command Line Tools (`xcode-select --install`).
 
 ```sh
@@ -70,7 +77,8 @@ The Makefile signs with your "Apple Development" identity if you have one, and a
 otherwise. To install on a Mac without the toolchain, run `make zip` and copy
 `build/Fyxel.zip` across. If it was downloaded or AirDropped, run
 `xattr -dr com.apple.quarantine /Applications/Fyxel.app` before opening it, because the build
-isn't notarized.
+isn't notarized. `make dmg` builds the release disk image (ad-hoc signed; needs
+[uv](https://docs.astral.sh/uv/) for dmgbuild).
 
 On first launch macOS asks for **Local Network** access. Allow it, or the app can't reach
 the router.
