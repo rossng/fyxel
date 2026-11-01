@@ -58,7 +58,7 @@ struct MainView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .status) { LiveRateChip() }
+            rateToolbarItem
             ToolbarItem {
                 Button { Task { await model.refreshAll() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
                     .help("Refresh everything (⌘R)")
@@ -99,17 +99,57 @@ struct SidebarFooter: View {
     }
 }
 
+/// WAN rate readout for the toolbar: plain text, fixed widths so it doesn't jiggle as the
+/// numbers change, and a tiny sparkline of the last minute.
+extension MainView {
+    /// On macOS 26 toolbar items get a glass bubble; the readout looks better without it.
+    @ToolbarContentBuilder var rateToolbarItem: some ToolbarContent {
+        if #available(macOS 26.0, *) {
+            ToolbarItem(placement: .status) { LiveRateChip() }.sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItem(placement: .status) { LiveRateChip() }
+        }
+    }
+}
+
 struct LiveRateChip: View {
     @Environment(AppModel.self) private var model
     var body: some View {
         let r = model.rates.last
-        HStack(spacing: 10) {
-            HStack(spacing: 3) { Image(systemName: "arrow.down"); Text(Fmt.bits(r?.down ?? 0)) }.foregroundStyle(.blue)
-            HStack(spacing: 3) { Image(systemName: "arrow.up"); Text(Fmt.bits(r?.up ?? 0)) }.foregroundStyle(.orange)
+        HStack(spacing: 12) {
+            rate("arrow.down", r?.down, .blue)
+            rate("arrow.up", r?.up, .orange)
+            Sparkline(values: model.rates.suffix(30).map(\.down)).frame(width: 54, height: 16)
         }
-        .font(.system(.callout, design: .monospaced))
-        .monospacedDigit()
-        .help("WAN throughput")
+        .font(.system(size: 12, weight: .medium, design: .monospaced))
+        .padding(.horizontal, 6)
+        .fixedSize()
+        .help("WAN throughput (last minute)")
+    }
+
+    func rate(_ icon: String, _ v: Double?, _ c: Color) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon).font(.system(size: 10, weight: .bold))
+            Text(v.map(Fmt.bits) ?? "–").frame(width: 78, alignment: .leading)
+        }
+        .foregroundStyle(c)
+    }
+}
+
+struct Sparkline: View {
+    var values: [Double]
+    var body: some View {
+        GeometryReader { g in
+            let peak = max(values.max() ?? 0, 1)
+            Path { p in
+                for (i, v) in values.enumerated() {
+                    let x = g.size.width * CGFloat(i) / CGFloat(max(values.count - 1, 1))
+                    let y = g.size.height * (1 - CGFloat(v / peak))
+                    if i == 0 { p.move(to: CGPoint(x: x, y: y)) } else { p.addLine(to: CGPoint(x: x, y: y)) }
+                }
+            }
+            .stroke(Color.blue.opacity(0.7), lineWidth: 1.2)
+        }
     }
 }
 
