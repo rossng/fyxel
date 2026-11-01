@@ -106,6 +106,10 @@ reset, you get a "Trust New Certificate" button.
 
 ## fyxelctl
 
+The app includes a command-line client. To put it on your PATH, choose **Fyxel › Install Command
+Line Tool…**, which links `~/.local/bin/fyxelctl` to the copy inside the app, so it stays in
+step with app updates. `make install` creates the same link.
+
 ```sh
 fyxelctl dal lanhosts                        # GET /cgi-bin/DAL?oid=lanhosts → Object
 fyxelctl get /cgi-bin/RoutingTable_handle

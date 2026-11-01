@@ -1,7 +1,7 @@
 # Build Fyxel.app from the Swift package. Needs Xcode or the Command Line Tools.
 #
 #   make            build build/Fyxel.app
-#   make install    copy it to /Applications (and fyxelctl to ~/.local/bin)
+#   make install    copy it to /Applications (and link fyxelctl into ~/.local/bin)
 #   make run        build and open
 #   make zip        build/Fyxel.zip, for copying to another Mac
 #   make dmg        build/Fyxel-<version>.dmg for releases (ad-hoc signed, not notarized; needs uv)
@@ -37,8 +37,11 @@ app:
 	rm -rf $(APP)
 	mkdir -p $(APP)/Contents/MacOS $(APP)/Contents/Resources
 	cp "$(BIN)/Fyxel" $(APP)/Contents/MacOS/Fyxel
+	cp "$(BIN)/fyxelctl" $(APP)/Contents/MacOS/fyxelctl
 	cp Support/Info.plist $(APP)/Contents/Info.plist
 	[ -f Support/AppIcon.icns ] && cp Support/AppIcon.icns $(APP)/Contents/Resources/ || true
+	# Nested code has to be signed before the bundle that contains it.
+	codesign --force --options runtime --timestamp=none --sign "$(IDENTITY)" --identifier eu.rossng.fyxelctl $(APP)/Contents/MacOS/fyxelctl
 	codesign --force --options runtime --timestamp=none --sign "$(IDENTITY)" $(APP)
 	@echo "Signed with: $(IDENTITY)"
 
@@ -46,8 +49,8 @@ install: app
 	rm -rf /Applications/Fyxel.app
 	cp -R $(APP) /Applications/
 	mkdir -p $(HOME)/.local/bin
-	cp "$(BIN)/fyxelctl" $(HOME)/.local/bin/fyxelctl
-	@echo "Installed /Applications/Fyxel.app and ~/.local/bin/fyxelctl"
+	ln -sfn /Applications/Fyxel.app/Contents/MacOS/fyxelctl $(HOME)/.local/bin/fyxelctl
+	@echo "Installed /Applications/Fyxel.app and linked ~/.local/bin/fyxelctl to it"
 
 run: app
 	open $(APP)

@@ -17,6 +17,9 @@ struct FyxelApp: App {
         .windowToolbarStyle(.unified(showsTitle: false))
         .commands {
             CommandGroup(replacing: .newItem) {}
+            CommandGroup(after: .appSettings) {
+                Button("Install Command Line Tool…") { CLIInstaller.run() }
+            }
             CommandMenu("Router") {
                 // Not `.disabled(...)`: in testing, the menu's enabled state didn't follow `model.phase`.
                 Button("Go to Anything…") { if model.phase == .loggedIn { model.paletteOpen.toggle() } }
